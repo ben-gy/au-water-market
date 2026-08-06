@@ -1,0 +1,43 @@
+name: Data Pipeline
+
+on:
+  schedule:
+    # SOURCE CADENCE: the Bureau rebuilds all three water-market CSVs DAILY
+    # (Last-Modified moves every day, and the newest trade is typically 2-3 days
+    # old). Monthly is the fastest cadence this factory permits, and it is also
+    # the honest one here: agencies report trades in arrears, so the trailing
+    # six weeks are structurally incomplete and re-collecting daily would only
+    # re-shuffle a provisional tail.
+    # Day 11 at 04:41 UTC — staggered so sibling repos do not all fire together.
+    - cron: '41 4 11 * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['pipeline/**']
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      # The pipeline is deliberately dependency-free — `node pipeline/collect.mjs`
+      # runs on a bare Node 20 with nothing installed.
+      #
+      # NOTE: the data host answers on http:// ONLY (its HTTPS listener times out
+      # with curl exit 35), and serves no CORS headers, which is why this is a
+      # build-time job and not a browser fetch.
+      - name: Collect and reconcile
+        run: node pipeline/collect.mjs
+      - name: Commit data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/
+          git diff --cached --quiet || git commit -m "Update water market data $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push || (git pull --rebase && git push)

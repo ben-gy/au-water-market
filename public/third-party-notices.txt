@@ -1,0 +1,68 @@
+Water Market — third-party notices
+https://au-water-market.benrichardson.dev/
+
+This site's own code is licensed AGPL-3.0-or-later with an additional
+attribution term under section 7(b). See the repository's LICENSE and
+ADDITIONAL-TERMS.md.
+
+Derived from the `sources` recorded in the production sourcemaps — i.e. what is
+actually shipped to a browser. No fonts are vendored; the site uses a system
+font stack only.
+
+================================================================================
+Leaflet 1.9.4 — https://leafletjs.com/
+================================================================================
+
+BSD 2-Clause License
+
+Copyright (c) 2010-2023, Volodymyr Agafonkin
+Copyright (c) 2010-2011, CloudMade
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+================================================================================
+Data and map tiles (not code; separate terms)
+================================================================================
+
+Bureau of Meteorology water market data
+  © Commonwealth of Australia (Bureau of Meteorology)
+  Creative Commons Attribution 4.0 International
+  https://creativecommons.org/licenses/by/4.0/
+  Source: http://www.bom.gov.au/water/market/
+  The underlying trade records are supplied to the Bureau by around 44 state
+  and territory agencies under the Water Regulations 2008.
+
+Australian Bureau of Statistics — ASGS state and territory boundaries
+  © Commonwealth of Australia (Australian Bureau of Statistics)
+  Creative Commons Attribution 4.0 International
+  https://creativecommons.org/licenses/by/4.0/
+
+OpenStreetMap contributors — basemap data
+  Open Database License 1.0
+  https://www.openstreetmap.org/copyright
+
+CARTO — basemap tile rendering
+  https://carto.com/attributions
+
+Neither the Bureau of Meteorology nor the Australian Bureau of Statistics
+endorses this site or its analysis.

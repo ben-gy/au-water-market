@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://au-water-market.benrichardson.dev/sitemap.xml

@@ -1,0 +1,443 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+ * SPDX-FileCopyrightText: 2026 Ben Richardson <hi@ben.gy>
+ *
+ * A light river palette, not a trading terminal. The reader is as likely to be
+ * an irrigator on a phone in a paddock as an analyst at a desk, and a black
+ * console theme would both fail in sunlight and overstate the immediacy of a
+ * dataset whose last four weeks are structurally incomplete.
+ */
+
+/* Leaflet's own stylesheet from the npm package — never a CDN. */
+@import 'leaflet/dist/leaflet.css';
+
+:root {
+  --bg-base: #ffffff;
+  --bg-surface: #f5f7f8;
+  --bg-elevated: #eaeff2;
+  --bg-panel: #ffffff;
+  --bg-hover: #eef4f7;
+  --bg-active: #dfe9ee;
+
+  --border-subtle: #e4eaee;
+  --border-default: #cbd6dd;
+  --border-strong: #93a4b0;
+
+  --text-primary: #10222c;
+  --text-secondary: #3d4f5a;
+  /* Both carry real prose, so both clear WCAG AA. Recomputed, not eyeballed:
+     #52646f on white = 6.63:1; #5c6d79 on the #f5f7f8 table-header background
+     = 5.15:1 (the earlier #667884 was 4.26:1 there and failed). */
+  --text-tertiary: #52646f;
+  --text-muted: #5c6d79;
+
+  --accent: #1f6f8b;
+  --accent-hover: #155468;
+  --accent-soft: #e8f2f6;
+
+  --allocation: #1f6f8b;
+  --entitlement: #b06b1f;
+
+  --status-good: #2f6f4f;
+  --status-warn: #8a5f1c;
+  --status-bad: #9b3a2c;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Helvetica, Arial, sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Leaflet hands its own panes and controls z-index up to 1000, and unless the
+     map container establishes a stacking context those children escape to the
+     page root and paint OVER modals and drawers. Everything below clears 1000,
+     and .map-frame isolates Leaflet so it can never climb out. */
+  --z-header: 900;
+  --z-scrim: 2000;
+  --z-drawer: 2050;
+  --z-modal: 2100;
+  --z-gloss: 2300;
+  --z-tip: 2400;
+}
+
+/* MANDATORY — the [hidden] guard, ahead of every component rule.
+   An author rule like `.overlay-host{display:flex}` OUTRANKS the browser's own
+   `[hidden]{display:none}`, because author origin beats the UA stylesheet
+   regardless of specificity. Without this line, anything hidden via the
+   ATTRIBUTE renders from first paint at its own z-index and `el.hidden = true`
+   does nothing at all — which once shipped a modal that could not be closed by
+   its ✕, its scrim, or Escape, all three handlers firing correctly every time.
+   This site detaches overlays from the DOM instead of relying on the attribute,
+   but the guard stays because it costs nothing and its absence has shipped. */
+[hidden] { display: none !important; }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  /* clip, never hidden — `overflow-x: hidden` silently kills position: sticky
+     on every ancestor scrollport, taking the header with it. */
+  overflow-x: clip;
+}
+body.drawer-open { overflow: hidden; }
+
+#app { min-height: 100vh; display: flex; flex-direction: column; }
+.main-content {
+  flex: 1 0 auto; width: 100%; max-width: 1680px; margin: 0 auto;
+  padding: 18px clamp(12px, 3vw, 32px) 56px;
+}
+
+.skip { position: absolute; left: -9999px; font: inherit; border: none; background: none; cursor: pointer; }
+.skip:focus { left: 12px; top: 12px; z-index: 3000; background: #fff; padding: 8px 12px; border-radius: var(--radius-sm); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── header ─────────────────────────────────────────────────────────── */
+.site-header {
+  position: sticky; top: 0; z-index: var(--z-header);
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border-default);
+}
+.header-inner {
+  display: flex; align-items: center; gap: 12px;
+  max-width: 1680px; margin: 0 auto; padding: 8px clamp(12px, 3vw, 32px);
+}
+.brand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text-primary); flex-shrink: 0; }
+.brand-mark { width: 26px; height: 26px; color: var(--accent); flex-shrink: 0; }
+.brand-txt { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.brand-txt h1 { font-size: 0.97rem; letter-spacing: -0.01em; font-weight: 700; line-height: 1.15; }
+.brand-txt small { font-size: 0.67rem; color: var(--text-muted); }
+
+.tabs { display: flex; gap: 1px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs a {
+  padding: 10px 10px; min-height: 40px; display: flex; align-items: center;
+  font-size: 0.79rem; font-weight: 500; text-decoration: none;
+  color: var(--text-secondary); border-radius: var(--radius-sm); white-space: nowrap;
+  transition: background 150ms ease, color 150ms ease;
+}
+.tabs a:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.tabs a[aria-current='page'] { background: var(--accent-soft); color: var(--accent-hover); font-weight: 650; }
+
+.header-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.icon-btn {
+  width: 34px; height: 34px; display: grid; place-items: center;
+  border: 1px solid var(--border-default); background: var(--bg-panel);
+  border-radius: var(--radius-sm); cursor: pointer; color: var(--text-secondary);
+  font-size: 0.95rem; font-weight: 700;
+}
+.icon-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+/* ── panels ─────────────────────────────────────────────────────────── */
+.panel {
+  background: var(--bg-panel); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg); margin-bottom: 18px; overflow: hidden;
+}
+.panel-head { padding: 16px 18px 10px; }
+/* NOT a flex container: the trailing ℹ button is a flex ITEM under `display:
+   flex`, so on a narrow screen it wraps onto a line of its own and floats
+   under the heading, detached from the words it explains. Inline flow keeps it
+   attached to the last word, which is the whole point of it. */
+.panel-head h2 { font-size: 1.02rem; letter-spacing: -0.01em; }
+.panel-sub { font-size: 0.82rem; color: var(--text-tertiary); margin-top: 4px; max-width: 78ch; }
+.panel-body { padding: 4px 18px 18px; }
+/* Wide-by-nature content scrolls inside its own box so the PAGE never does. */
+.panel-body.scroll-x { overflow-x: auto; padding-bottom: 14px; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 0.76rem; color: var(--text-tertiary); }
+/* A 1px edge so the pale end of every ramp is still visible on a white panel —
+   without it the map's "Balanced" swatch (rgb 245,247,250) renders as nothing
+   and its label floats beside empty space. */
+.sw { width: 11px; height: 11px; border-radius: 2px; display: inline-block; flex-shrink: 0; box-shadow: inset 0 0 0 1px rgba(16,34,44,.22); }
+.sw-line { height: 3px; border-radius: 2px; }
+
+/* ── stat tiles ─────────────────────────────────────────────────────── */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 12px; margin-bottom: 18px; }
+.stat {
+  background: var(--bg-panel); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); padding: 13px 15px; min-width: 0;
+}
+.stat .k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); display: flex; align-items: center; gap: 3px; }
+.stat .v { font-family: var(--font-mono); font-size: 1.42rem; font-weight: 600; margin-top: 3px; letter-spacing: -0.02em; }
+.stat .d { font-size: 0.76rem; color: var(--text-tertiary); margin-top: 2px; }
+.stat .v.up { color: var(--status-bad); }
+.stat .v.down { color: var(--status-good); }
+
+/* ── insight cards ──────────────────────────────────────────────────── */
+.insights { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 12px; }
+.insight {
+  border: 1px solid var(--border-subtle); border-left-width: 4px;
+  border-radius: var(--radius-md); padding: 13px 15px; background: var(--bg-panel); min-width: 0;
+}
+.insight.alert { border-left-color: var(--status-bad); }
+.insight.warn { border-left-color: var(--status-warn); }
+.insight.info { border-left-color: var(--accent); }
+.insight h3 { font-size: 0.9rem; margin-bottom: 5px; }
+.insight p { font-size: 0.83rem; color: var(--text-secondary); }
+.insight button.jump {
+  margin-top: 8px; font-size: 0.76rem; background: none; border: none; padding: 0;
+  color: var(--accent); cursor: pointer; font-weight: 600;
+}
+.insight button.jump:hover { text-decoration: underline; }
+
+/* ── tables ─────────────────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
+th, td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; }
+th {
+  font-size: 0.71rem; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-muted); font-weight: 600; background: var(--bg-surface);
+  position: sticky; top: 0; z-index: 1;
+}
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--text-primary); }
+th .arrow { opacity: 0.45; margin-left: 3px; }
+td.num, th.num { text-align: right; font-family: var(--font-mono); }
+tbody tr:hover { background: var(--bg-hover); }
+tbody tr.clickable { cursor: pointer; }
+.zone-link { color: var(--accent); cursor: pointer; text-decoration: none; }
+.zone-link:hover { text-decoration: underline; }
+/* Zone names run to 130 characters ("…that part of the water source downstream
+   of the River Murray at Picnic Point"). Unconstrained they push every numeric
+   column past the right edge of the scroller, so the figures the table exists
+   to show are the one thing you cannot see. The full name is always available
+   in the drill-down. */
+td .zone-link { display: inline-block; max-width: 46ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.pill {
+  display: inline-block; padding: 1px 7px; border-radius: 999px;
+  font-size: 0.7rem; font-weight: 600; color: #fff; white-space: nowrap;
+}
+
+/* ── controls ───────────────────────────────────────────────────────── */
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+.controls label { font-size: 0.78rem; color: var(--text-tertiary); display: flex; align-items: center; gap: 6px; }
+select, input[type='search'], input[type='text'] {
+  font: inherit; font-size: 0.82rem; padding: 6px 9px; min-height: 36px;
+  border: 1px solid var(--border-default); border-radius: var(--radius-sm);
+  background: var(--bg-panel); color: var(--text-primary); max-width: 100%;
+}
+input[type='range'] { accent-color: var(--accent); }
+.seg { display: inline-flex; border: 1px solid var(--border-default); border-radius: var(--radius-sm); overflow: hidden; }
+.seg button {
+  font: inherit; font-size: 0.78rem; padding: 7px 11px; min-height: 36px;
+  background: var(--bg-panel); border: none; cursor: pointer; color: var(--text-secondary);
+  border-right: 1px solid var(--border-subtle);
+}
+.seg button:last-child { border-right: none; }
+.seg button[aria-pressed='true'] { background: var(--accent-soft); color: var(--accent-hover); font-weight: 650; }
+.seg button:hover { background: var(--bg-hover); }
+
+/* ── charts ─────────────────────────────────────────────────────────── */
+.chart { position: relative; }
+.chart svg { display: block; max-width: 100%; height: auto; overflow: visible; }
+
+/* MOBILE CHART LEGIBILITY.
+   Charts are authored at a viewBox width of 980 and then scaled to fit. At
+   375px the panel body is ~321px, a scale factor of 0.33 — so a 10px axis label
+   renders at 3.3 CSS px, which is unreadable and fails SC 1.4.4. Rather than
+   re-author every chart, the charts scroll horizontally at a minimum legible
+   width below 700px, exactly as the tables and heatmap already do. Text then
+   renders at its authored size and the reader pans instead of squinting. */
+@media (max-width: 700px) {
+  .panel-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .chart { min-width: 620px; }
+  .chart svg { min-width: 620px; }
+  /* The radial clock is square and reads fine when simply scaled. */
+  .chart.no-scroll, .chart.no-scroll svg { min-width: 0; }
+}
+.grid line { stroke: var(--border-subtle); stroke-width: 1; }
+/* BOTH selectors are required. `.axis text` matches a <text> INSIDE a group
+   with class="axis"; `text.axis` matches a <text> that CARRIES the class. The
+   charts use both shapes, and with only the first every standalone axis label
+   silently fell back to the browser's 16px default — which on a scaled-up
+   viewBox rendered at ~24px and collided with the data. */
+.axis text, text.axis { font-size: 10px; fill: var(--text-muted); font-family: var(--font-mono); }
+.axis-title, text.axis-title { font-size: 10.5px; fill: var(--text-tertiary); font-weight: 600; }
+text.tm-label { font-size: 12px; font-weight: 700; }
+text.tm-sub { font-size: 10.5px; }
+/* `.mark` is the hover-tooltip hook on every drawn shape, most of which are not
+   clickable. A hand cursor on all of them promises an interaction that is not
+   there, so the pointer is opt-in via `.mark.clickable`. */
+.mark { cursor: default; }
+.mark:hover { filter: brightness(0.92); }
+.mark.clickable, .clickable > .mark { cursor: pointer; }
+.prov { fill: rgba(176, 107, 31, 0.09); }
+.prov-label { font-size: 9.5px; fill: var(--status-warn); }
+
+/* ── map ────────────────────────────────────────────────────────────── */
+/* isolation + z-index:0 contains Leaflet's panes so they cannot paint over a
+   modal. This has shipped broken before: an About panel rendered UNDER a map. */
+.map-frame { isolation: isolate; position: relative; z-index: 0; border-radius: var(--radius-md); overflow: hidden; }
+.map-el { height: min(62vh, 560px); min-height: 340px; width: 100%; background: var(--bg-elevated); }
+.leaflet-container { font: inherit; background: #eaeff2; }
+
+/* ── tooltip ────────────────────────────────────────────────────────── */
+.hover-tip {
+  position: fixed; z-index: var(--z-tip); pointer-events: none; opacity: 0;
+  background: #10222c; color: #f2f6f8; padding: 7px 10px; border-radius: 6px;
+  font-size: 0.76rem; line-height: 1.45; max-width: 300px; white-space: pre-line;
+  box-shadow: 0 6px 20px rgba(16, 34, 44, 0.28); transition: opacity 110ms ease;
+}
+.hover-tip.visible { opacity: 1; }
+
+/* ── glossary ───────────────────────────────────────────────────────── */
+/* WCAG 2.2 SC 2.5.8 wants 24x24 CSS px minimum. The visible dot stays small so
+   it does not shout inside a heading, but the BUTTON's hit area is 24x24 via
+   padding, and the negative margin keeps the inline rhythm unchanged. */
+button.gloss {
+  width: 24px; height: 24px; border-radius: 50%; border: none; cursor: pointer;
+  background: none; color: var(--accent-hover);
+  font-size: 10.5px; font-weight: 700; font-style: italic; font-family: Georgia, serif;
+  padding: 0; margin: -4px -2px -4px 1px; vertical-align: middle; flex-shrink: 0;
+  display: inline-grid; place-items: center;
+}
+button.gloss::before {
+  content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--accent-soft); z-index: -1;
+}
+button.gloss { position: relative; isolation: isolate; }
+button.gloss:hover { background: var(--accent); color: #fff; }
+.gloss-pop {
+  position: fixed; z-index: var(--z-gloss); max-width: min(340px, calc(100vw - 24px));
+  background: var(--bg-panel); border: 1px solid var(--border-default);
+  border-radius: var(--radius-md); padding: 12px 14px;
+  box-shadow: 0 12px 34px rgba(16, 34, 44, 0.2);
+}
+.gloss-pop h4 { font-size: 0.85rem; margin-bottom: 5px; }
+.gloss-pop p { font-size: 0.8rem; color: var(--text-secondary); }
+
+/* ── overlays ───────────────────────────────────────────────────────── */
+.overlay-host { position: fixed; inset: 0; z-index: var(--z-scrim); }
+.scrim { position: fixed; inset: 0; background: rgba(16, 34, 44, 0.42); }
+.modal {
+  position: fixed; z-index: var(--z-modal); left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(720px, calc(100vw - 24px)); max-height: min(86vh, 780px);
+  display: flex; flex-direction: column;
+  background: var(--bg-panel); border-radius: var(--radius-lg);
+  box-shadow: 0 24px 64px rgba(16, 34, 44, 0.3);
+}
+.drawer {
+  position: fixed; z-index: var(--z-drawer); right: 0; top: 0; bottom: 0;
+  width: min(560px, 100vw); display: flex; flex-direction: column;
+  background: var(--bg-panel); box-shadow: -14px 0 44px rgba(16, 34, 44, 0.22);
+}
+.drawer-head, .modal-head {
+  display: flex; align-items: flex-start; gap: 12px; padding: 15px 18px;
+  border-bottom: 1px solid var(--border-subtle); flex-shrink: 0;
+}
+.drawer-head h2, .modal-head h2 { font-size: 1rem; flex: 1; min-width: 0; }
+.drawer-head .sub, .modal-head .sub { font-size: 0.78rem; color: var(--text-tertiary); font-weight: 400; }
+.drawer-body, .modal-body { padding: 16px 18px 28px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
+.modal-body h3 { font-size: 0.88rem; margin: 16px 0 5px; }
+.modal-body p { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 9px; }
+.modal-body ul { margin: 0 0 10px 18px; font-size: 0.85rem; color: var(--text-secondary); }
+.modal-body li { margin-bottom: 5px; }
+.modal-body a { color: var(--accent); }
+/* 44x44 hit area, inside the panel's own bounds — never hanging off an edge. */
+.icon-close {
+  width: 44px; height: 44px; margin: -6px -8px -6px 0; flex-shrink: 0;
+  display: grid; place-items: center; background: none; border: none;
+  cursor: pointer; color: var(--text-tertiary); font-size: 1.05rem; border-radius: var(--radius-sm);
+}
+.icon-close:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 5px 14px; font-size: 0.83rem; margin-bottom: 14px; }
+.kv dt { color: var(--text-muted); }
+.kv dd { font-family: var(--font-mono); text-align: right; }
+
+/* ── states ─────────────────────────────────────────────────────────── */
+.loading, .error-box, .empty {
+  padding: 40px 20px; text-align: center; color: var(--text-tertiary); font-size: 0.88rem;
+}
+.error-box { color: var(--status-bad); }
+.error-box button {
+  display: block; margin: 12px auto 0; font: inherit; font-size: 0.82rem;
+  padding: 8px 16px; min-height: 40px; border: 1px solid var(--border-default);
+  background: var(--bg-panel); border-radius: var(--radius-sm); cursor: pointer;
+}
+.skeleton { height: 260px; border-radius: var(--radius-md); background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-surface) 50%, var(--bg-elevated) 75%); background-size: 200% 100%; animation: sk 1.4s ease-in-out infinite; }
+@keyframes sk { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } * { transition: none !important; } }
+
+.note {
+  font-size: 0.78rem; color: var(--text-tertiary); background: var(--bg-surface);
+  border-left: 3px solid var(--border-default); padding: 9px 12px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin-top: 12px;
+}
+
+/* ── ranked bar rows ────────────────────────────────────────────────── */
+.bars { display: flex; flex-direction: column; gap: 3px; }
+.barrow {
+  display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 2fr) auto;
+  align-items: center; gap: 10px; width: 100%; min-height: 34px;
+  padding: 5px 8px; background: none; border: none; border-radius: var(--radius-sm);
+  cursor: pointer; text-align: left; font: inherit; color: inherit;
+}
+.barrow:hover { background: var(--bg-hover); }
+/* min-width:0 is load-bearing: without it a nowrap label refuses to shrink
+   below its content width and forces the whole grid — and the page — wider
+   than a 375px viewport. */
+.barlabel {
+  font-size: 0.79rem; color: var(--text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+/* A bare <span> is inline, and width:% on an inline box does nothing at all —
+   the bar would render as an invisible zero-height nothing. */
+.bartrack { display: block; height: 9px; background: var(--bg-elevated); border-radius: 999px; overflow: hidden; min-width: 0; }
+.barfill { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.barval { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-tertiary); flex-shrink: 0; white-space: nowrap; }
+
+ol.board { list-style: none; counter-reset: b; margin-top: 6px; }
+ol.board li {
+  counter-increment: b; display: flex; align-items: baseline; gap: 8px;
+  font-size: 0.8rem; padding: 3px 0; border-bottom: 1px solid var(--border-subtle);
+}
+ol.board li::before { content: counter(b); font-family: var(--font-mono); color: var(--text-muted); font-size: 0.72rem; width: 14px; flex-shrink: 0; }
+ol.board li button {
+  flex: 1; min-width: 0; text-align: left; background: none; border: none; padding: 0;
+  font: inherit; font-size: 0.8rem; color: var(--accent); cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+ol.board li button:hover { text-decoration: underline; }
+ol.board li span { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-tertiary); flex-shrink: 0; }
+
+/* ── footer ─────────────────────────────────────────────────────────── */
+.site-footer { flex-shrink: 0; border-top: 1px solid var(--border-default); background: var(--bg-panel); }
+.footer-inner {
+  max-width: 1680px; margin: 0 auto; padding: 18px clamp(12px, 3vw, 32px);
+  display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center;
+  font-size: 0.78rem; color: var(--text-tertiary);
+}
+.site-footer a { color: var(--accent); }
+
+/* ── mobile ─────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Chart type sizes live HERE, not in the earlier chart media query: CSS is
+     order-dependent at equal specificity, and the base `.axis text {10px}` rule
+     is declared further down the file than that block, so an override placed
+     there silently loses and every label stayed at 3.3 rendered px.
+     Because the SVG is scaled (620/980 ≈ 0.63; the clock 560→321 ≈ 0.57), the
+     AUTHORED size is raised so the RENDERED size lands near 10 CSS px. */
+  .axis text, text.axis { font-size: 16px; }
+  .axis-title, text.axis-title { font-size: 16.5px; }
+  .chart.no-scroll .axis text, .chart.no-scroll text.axis { font-size: 17.5px; }
+  .prov-label { font-size: 15px; }
+  text.tm-label { font-size: 19px; }
+  text.tm-sub { font-size: 16px; }
+
+  .header-inner { flex-wrap: wrap; gap: 8px; }
+  .tabs { order: 3; width: 100%; flex: 1 0 100%; }
+  .brand-txt small { display: none; }
+  .stat .v { font-size: 1.22rem; }
+  .panel-head { padding: 13px 14px 8px; }
+  .panel-body { padding: 4px 14px 15px; }
+  .main-content { padding: 14px 12px 44px; }
+  .drawer { width: 100vw; }
+}
